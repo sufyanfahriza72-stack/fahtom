@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>MUSAFA Mobile</title>
+  <!-- PWA Manifest & Icons -->
+  <link rel="manifest" href="<?= appUrl ?>?page=manifest">
+  <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1v9XLw_NjWKP9zdtIgREkPYmgakhKMq_n=s192">
+  <link rel="apple-touch-icon" href="https://lh3.googleusercontent.com/d/1v9XLw_NjWKP9zdtIgREkPYmgakhKMq_n=s192">
+
+  <!-- Tailwind CSS, FontAwesome, html2pdf & QRCode Library -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#1e3a8a',
+            secondary: '#0f172a',
+            accent: '#2563eb'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; transition: background-color 0.3s, color 0.3s; }
+    .font-small { font-size: 13px; }
+    .font-medium-custom { font-size: 15px; }
+    .font-large { font-size: 18px; }
+    canvas#sig-canvas { border: 2px dashed #94a3b8; border-radius: 0.5rem; cursor: crosshair; touch-action: none; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .dark ::-webkit-scrollbar-thumb { background: #475569; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-100 font-medium-custom min-h-screen flex flex-col">
+
+  <!-- AUDIO ALARM UNTUK NOTIFIKASI H-1 JAM -->
+  <audio id="alarmSound" preload="auto">
+    <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
+  </audio>
+
+  <!-- ==================== 1. HALAMAN LOGIN ==================== -->
+  <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-4 overflow-y-auto">
+    <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-8 text-center border border-slate-200 dark:border-slate-700 my-auto">
+      <img src="https://lh3.googleusercontent.com/d/1v9XLw_NjWKP9zdtIgREkPYmgakhKMq_n" alt="Logo MUSAFA" class="w-24 h-24 mx-auto mb-4 object-contain rounded-xl shadow-md bg-white p-1">
+      <h1 class="text-2xl font-extrabold tracking-wide text-slate-900 dark:text-white mb-1">SILAHKAN LOGIN</h1>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-6">MUSAFA Mobile — Sistem Managemen Agenda dan Tugas</p>
+      
+      <div class="relative mb-4 text-left">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Username Rahasia</label>
+        <div class="relative">
+          <input type="password" id="loginUsername" placeholder="Masukkan kredensial akses..." class="w-full px-4 py-3 pr-12 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600 outline-none">
+          <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-blue-600 dark:text-slate-300">
+            <i id="eyeIcon" class="fa-solid fa-eye"></i>
+          </button>
+        </div>
+      </div>
+
+      <button onclick="handleLogin()" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 rounded-xl shadow-lg transition mb-3">
+        <i class="fa-solid fa-right-to-bracket mr-2"></i> MASUK SISTEM
+      </button>
+
+      <div class="relative flex py-2 items-center">
+        <div class="flex-grow border-t border-slate-300 dark:border-slate-600"></div>
+        <span class="flex-shrink mx-3 text-xs text-slate-400">ATAU</span>
+        <div class="flex-grow border-t border-slate-300 dark:border-slate-600"></div>
+      </div>
+
+      <button onclick="handleGuestLogin()" class="w-full mt-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold py-2.5 rounded-xl transition text-sm">
+        <i class="fa-solid fa-user-clock mr-2"></i> Masuk Mode Tamu (Hanya Dashboard)
+      </button>
+
+      <!-- TOMBOL INSTAL APLIKASI DI HALAMAN LOGIN -->
+      <button onclick="triggerInstallPWA()" id="loginInstallBtn" class="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl shadow transition text-sm flex items-center justify-center gap-2">
+        <i class="fa-solid fa-download"></i> Instal Aplikasi (PWA)
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== MAIN APP CONTAINER ==================== -->
+  <div id="mainApp" class="hidden flex-1 flex flex-col">
+    
+    <!-- HEADER BAR -->
+    <header class="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30">
+      <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+        <!-- Logo Pojok Kiri Atas -->
+        <div class="flex items-center space-x-3">
+          <img src="https://lh3.googleusercontent.com/d/1v9XLw_NjWKP9zdtIgREkPYmgakhKMq_n" alt="Logo" class="w-11 h-11 rounded-lg object-contain bg-white p-0.5 shadow">
+          <div>
+            <h1 class="font-extrabold text-base md:text-lg leading-tight text-blue-900 dark:text-blue-400">MUSAFA Mobile</h1>
+            <p class="text-[11px] md:text-xs font-medium text-slate-500 dark:text-slate-400">Sistem Managemen Agenda dan Tugas</p>
+          </div>
+        </div>
+
+        <!-- Status Role, Tombol Instal PWA & Tombol Setting -->
+        <div class="flex items-center space-x-2">
+          <span id="roleBadge" class="hidden md:inline-block px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">ADMIN</span>
+          
+          <!-- TOMBOL INSTAL APLIKASI DI HEADER -->
+          <button onclick="triggerInstallPWA()" id="headerInstallBtn" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs md:text-sm transition flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-mobile-screen-button"></i> <span>Instal Aplikasi</span>
+          </button>
+
+          <button onclick="syncData(true)" title="Sinkronisasi Spreadsheet" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition">
+            <i id="syncIcon" class="fa-solid fa-rotate"></i>
+          </button>
+          <button onclick="openSettingsModal()" class="px-3.5 py-2 rounded-xl bg-slate-800 dark:bg-blue-600 text-white font-semibold text-xs md:text-sm hover:opacity-90 transition flex items-center gap-2">
+            <i class="fa-solid fa-gear"></i> <span class="hidden sm:inline">Setting</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- NAVIGATION TABS -->
+      <nav id="navTabs" class="max-w-7xl mx-auto px-4 flex overflow-x-auto space-x-1 pb-2 pt-1 text-xs md:text-sm font-semibold">
+        <button onclick="switchTab('dashboard')" class="tab-btn active px-4 py-2 rounded-lg bg-blue-700 text-white whitespace-nowrap"><i class="fa-solid fa-gauge-high mr-1.5"></i>Dashboard</button>
+        <button onclick="requestPinAndSwitch('agenda')" class="tab-btn px-4 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap"><i class="fa-solid fa-calendar-check mr-1.5"></i>Input Agenda</button>
+        <button onclick="requestPinAndSwitch('pelajaran')" class="tab-btn px-4 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap"><i class="fa-solid fa-book-open mr-1.5"></i>Jadwal Pelajaran</button>
+        <button onclick="requestPinAndSwitch('ujian')" class="tab-btn px-4 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap"><i class="fa-solid fa-file-pen mr-1.5"></i>Jadwal Ujian</button>
+        <button onclick="requestPinAndSwitch('tugas')" class="tab-btn px-4 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap"><i class="fa-solid fa-list-check mr-1.5"></i>Input Tugas</button>
+        <button onclick="switchTab('notulensi')" class="tab-btn px-4 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap"><i class="fa-solid fa-file-signature mr-1.5"></i>Notulensi & TTE</button>
+      </nav>
+    </header>
+
+    <!-- CONTENT AREA -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 space-y-6">
+
+      <!-- ==================== 2. HALAMAN DASHBOARD ==================== -->
+      <section id="tab-dashboard" class="tab-content space-y-6">
+        
+        <!-- Banner Selamat Datang & Live Waktu -->
+        <div class="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <span class="inline-block px-3 py-1 bg-white/15 rounded-full text-xs font-semibold mb-2 tracking-wide">PORTAL KENDALI UTAMA</span>
+            <h2 class="text-xl md:text-2xl font-extrabold tracking-tight">SELAMAT DATANG DI MUSAFA MOBILE</h2>
+            <p id="liveClock" class="text-blue-100 text-sm md:text-base font-medium mt-1">Memuat waktu...</p>
+          </div>
+          
+          <!-- Hitung Mundur Agenda Terdekat -->
+          <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 w-full md:w-auto min-w-[260px]">
+            <p class="text-[11px] uppercase tracking-wider text-blue-200 font-bold"><i class="fa-solid fa-hourglass-half mr-1"></i> Hitung Mundur Agenda Terdekat</p>
+            <h3 id="nextAgendaTitle" class="font-bold text-sm truncate mt-0.5">Tidak ada agenda aktif</h3>
+            <div id="countdownTimer" class="text-xl md:text-2xl font-extrabold text-amber-300 mt-1 font-mono">-- : -- : -- : --</div>
+          </div>
+        </div>
+
+        <!-- Grid Kalender & Jadwal Agenda -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="font-bold text-base"><i class="fa-regular fa-calendar mr-2 text-blue-600"></i>Kalender Kegiatan</h3>
+              <input type="date" id="calendarFilter" onchange="renderDashboard()" class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+            </div>
+            <div id="calendarDateEvents" class="space-y-2.5 max-h-72 overflow-y-auto"></div>
+          </div>
+
+          <div class="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="font-bold text-base"><i class="fa-solid fa-briefcase mr-2 text-blue-600"></i>Jadwal Agenda (Prioritas & Jatuh Tempo Terdekat)</h3>
+              <span class="text-xs text-slate-400">Otomatis Selesai jika Lewat Waktu</span>
+            </div>
+            <div id="dashboardAgendaList" class="space-y-3 max-h-80 overflow-y-auto"></div>
+          </div>
+        </div>
+
+        <!-- Grid Jadwal Pelajaran / Ujian & Tugas -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+            <div class="flex justify-between items-center mb-4">
+              <h3 id="scheduleHeaderTitle" class="font-bold text-base"><i class="fa-solid fa-graduation-cap mr-2 text-blue-600"></i>Jadwal Pelajaran Hari Ini & Besok</h3>
+              <span id="examModeBadge" class="hidden px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-600 text-white animate-pulse">MODE UJIAN AKTIF</span>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-2">HARI INI</h4>
+                <div id="todayScheduleList" class="space-y-2"></div>
+              </div>
+              <div class="border-t border-slate-200 dark:border-slate-700 pt-3">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-2">BESOK</h4>
+                <div id="tomorrowScheduleList" class="space-y-2"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+            <h3 class="font-bold text-base mb-4"><i class="fa-solid fa-clipboard-list mr-2 text-amber-500"></i>Daftar Tugas Sekolah</h3>
+            <div id="dashboardTugasList" class="space-y-3 max-h-96 overflow-y-auto"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 3. HALAMAN INPUT AGENDA ==================== -->
+      <section id="tab-agenda" class="tab-content hidden space-y-6">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+          <h2 class="text-lg font-bold mb-4"><i class="fa-solid fa-calendar-plus mr-2 text-blue-600"></i>Input / Edit Jadwal Agenda</h2>
+          <form id="formAgenda" onsubmit="submitAgenda(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="hidden" id="agendaId">
+            <div>
+              <label class="block text-xs font-semibold mb-1">Judul Agenda</label>
+              <input type="text" id="agendaJudul" required class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Lokasi Agenda</label>
+              <input type="text" id="agendaLokasi" required class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Jatuh Tempo (Tanggal & Jam)</label>
+              <input type="datetime-local" id="agendaJatuhTempo" required class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Opsi Durasi / Full Day</label>
+              <select id="agendaDurasi" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+                <option value="Sesuai Jam">Sesuai Jam</option>
+                <option value="Full Day - 1 Hari">Full Day (1 Hari)</option>
+                <option value="Full Day - 2 Hari">Full Day (2 Hari)</option>
+                <option value="Full Day - 3 Hari">Full Day (3 Hari)</option>
+                <option value="Full Day - 1 Pekan">Full Day (1 Pekan)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Prioritas</label>
+              <select id="agendaPrioritas" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+                <option value="DINAS">DINAS (Tertinggi)</option>
+                <option value="KHUSUS">KHUSUS (Menengah)</option>
+                <option value="UMUM">UMUM (Reguler)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Status</label>
+              <select id="agendaStatus" onchange="toggleDisposisiField()" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+                <option value="Agendakan">Agendakan</option>
+                <option value="Disposisi">Disposisi</option>
+              </select>
+            </div>
+            <div id="disposisiWrapper" class="hidden">
+              <label class="block text-xs font-semibold mb-1 text-amber-600">Disposisi Kepada...</label>
+              <input type="text" id="agendaDisposisi" placeholder="Nama pejabat / unit tujuan disposisi" class="w-full px-3 py-2 rounded-xl border border-amber-400 bg-amber-50 dark:bg-slate-700">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Tamu Khusus</label>
+              <input type="text" id="agendaTamu" placeholder="Opsional" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+            </div>
+            <div class="md:col-span-2 flex gap-2 pt-2">
+              <button type="submit" class="px-6 py-2.5 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-xl shadow">Simpan Agenda</button>
+              <button type="button" onclick="resetForm('formAgenda', 'agendaId')" class="px-4 py-2.5 bg-slate-300 dark:bg-slate-600 rounded-xl font-semibold">Reset</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 overflow-x-auto">
+          <h3 class="font-bold mb-3">Data Agenda Tersimpan</h3>
+          <table class="w-full text-left border-collapse text-xs md:text-sm">
+            <thead>
+              <tr class="border-b border-slate-200 dark:border-slate-700 text-slate-500">
+                <th class="py-2">Judul & Lokasi</th>
+                <th class="py-2">Waktu & Durasi</th>
+                <th class="py-2">Prioritas</th>
+                <th class="py-2">Status</th>
+                <th class="py-2">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tableAgendaBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ==================== 4. HALAMAN INPUT JADWAL PELAJARAN ==================== -->
+      <section id="tab-pelajaran" class="tab-content hidden space-y-6">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+          <h2 class="text-lg font-bold mb-4"><i class="fa-solid fa-book mr-2 text-blue-600"></i>Input / Edit Jadwal Pelajaran</h2>
+          <form id="formPelajaran" onsubmit="submitPelajaran(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="hidden" id="pelajaranId">
+            <div>
+              <label class="block text-xs font-semibold mb-1">Nama Mata Pelajaran</label>
+              <input type="text" id="pelajaranMapel" required class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Nama Guru Mapel</label>
+              <input type="text" id="pelajaranGuru" required class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Hari</label>
+              <select id="pelajaranHari" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+                <option value="Senin">Senin</option>
+                <option value="Selasa">Selasa</option>
+                <option value="Rabu">Rabu</option>
+                <option value="Kamis">Kamis</option>
+                <option value="Jumat">Jumat</option>
+                <option value="Sabtu">Sabtu</option>
+                <option value="Minggu">Minggu</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Waktu (Contoh: 07:30 - 09:00)</label>
+              <input type="text" id="pelajaranWaktu" placeholder="07:30 - 09:00" required class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+            </div>
+            <div class="md:col-span-2 flex gap-2">
+              <button type="submit" class="px-6 py-2.5 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-xl shadow">Simpan Pelajaran</button>
+              <button type="button" onclick="resetForm('formPelajaran', 'pelajaranId')" class="px-4 py-2.5 bg-slate-300 dark:bg-slate-600 rounded-xl font-semibold">Reset</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 overflow-x-auto">
+          <table class="w-full text-left text-xs md:text-sm">
+            <thead>
+              <tr class="border-b border-slate-200 dark:border-slate-700 text-slate-500">
+                <th class="py-2">Hari & Waktu</th>
+                <th class="py-2">Mata Pelajaran</th>
+                <th class="py-2">Guru</th>
+                <th class="py-2">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tablePelajaranBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ==================== 5. HALAMAN INPUT JADWAL UJIAN ==================== -->
+      <section id="tab-ujian" class="tab-content hidden space-y-6">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+          <h2 class="text-lg font-bold mb-4"><i class="fa-solid fa-file-pen mr-2 text-red-600"></i>Input / Edit Jadwal Ujian</h2>
+          <form id="formUjian" onsubmit="submitUjian(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="hidden" id="ujianId">
+            <div>
+              <label class="block text-xs font-semibold mb-1">Hari</label>
+              <select id="ujianHari" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+                <option value="Senin">Senin</option>
+                <option value="Selasa">Selasa</option>
+                <option value="Rabu">Rabu</option>
+                <option value="Kamis">Kamis</option>
+                <option value="Jumat">Jumat</option>
+                <option value="Sabtu">Sabtu</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Jam Ujian (Contoh: 08:00 - 10:00)</label>
+              <input type="text" id="ujianJam" placeholder="08:00 - 10:00" required class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Nama Mata Pelajaran Ujian</label>
+              <input type="text" id="ujianMapel" required class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Status Mode Ujian (Menggantikan Mapel di Dashboard)</label>
+              <select id="ujianStatus" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+                <option value="AKTIF">AKTIF</option>
+                <option value="NON AKTIF">NON AKTIF</option>
+              </select>
+            </div>
+            <div class="md:col-span-2 flex gap-2">
+              <button type="submit" class="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow">Simpan Jadwal Ujian</button>
+              <button type="button" onclick="resetForm('formUjian', 'ujianId')" class="px-4 py-2.5 bg-slate-300 dark:bg-slate-600 rounded-xl font-semibold">Reset</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 overflow-x-auto">
+          <table class="w-full text-left text-xs md:text-sm">
+            <thead>
+              <tr class="border-b border-slate-200 dark:border-slate-700 text-slate-500">
+                <th class="py-2">Hari & Jam</th>
+                <th class="py-2">Mata Ujian</th>
+                <th class="py-2">Status</th>
+                <th class="py-2">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tableUjianBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ==================== 6. HALAMAN INPUT TUGAS ==================== -->
+      <section id="tab-tugas" class="tab-content hidden space-y-6">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+          <h2 class="text-lg font-bold mb-4"><i class="fa-solid fa-list-check mr-2 text-amber-500"></i>Input / Edit Tugas Sekolah</h2>
+          <form id="formTugas" onsubmit="submitTugas(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="hidden" id="tugasId">
+            <div>
+              <label class="block text-xs font-semibold mb-1">Deadline Tugas</label>
+              <input type="datetime-local" id="tugasDeadline" required class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Mata Pelajaran (Harus sesuai nama Mapel agar tertaut)</label>
+              <input type="text" id="tugasMapel" required class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Guru Mapel</label>
+              <input type="text" id="tugasGuru" required class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Detail Tugas</label>
+              <input type="text" id="tugasDetail" required class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+            </div>
+            <div class="md:col-span-2 flex gap-2">
+              <button type="submit" class="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow">Simpan Tugas</button>
+              <button type="button" onclick="resetForm('formTugas', 'tugasId')" class="px-4 py-2.5 bg-slate-300 dark:bg-slate-600 rounded-xl font-semibold">Reset</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 overflow-x-auto">
+          <table class="w-full text-left text-xs md:text-sm">
+            <thead>
+              <tr class="border-b border-slate-200 dark:border-slate-700 text-slate-500">
+                <th class="py-2">Deadline</th>
+                <th class="py-2">Mata Pelajaran & Guru</th>
+                <th class="py-2">Detail Tugas</th>
+                <th class="py-2">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tableTugasBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ==================== 7 & 8. HALAMAN NOTULENSI & TTE ==================== -->
+      <section id="tab-notulensi" class="tab-content hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
+            <h2 class="text-lg font-bold"><i class="fa-solid fa-file-signature mr-2 text-blue-600"></i>Pembuatan Notulensi Rapat</h2>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Judul / Agenda Rapat</label>
+              <input type="text" id="notulenJudul" placeholder="Contoh: Rapat Koordinasi Rohis" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Isi Notulensi</label>
+              <textarea id="notulenIsi" rows="7" placeholder="Tuliskan poin-poin pembahasan dan keputusan rapat di sini..." class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700"></textarea>
+            </div>
+            <button onclick="openSignatureModal()" class="px-6 py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-xl shadow flex items-center gap-2">
+              <i class="fa-solid fa-file-pdf"></i> Download PDF & Tanda Tangan
+            </button>
+          </div>
+
+          <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center space-y-4">
+            <h3 class="text-base font-bold"><i class="fa-solid fa-qrcode mr-2 text-emerald-600"></i>Verifikasi TTE (Tanda Tangan Elektronik)</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Scan QR atau masukkan Token Dinamis yang berubah setiap menit untuk memvalidasi TTD Pejabat.</p>
+            <div id="qrcodeContainer" class="p-3 bg-white rounded-xl shadow border"></div>
+            <div id="adminTokenPanel" class="hidden w-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-700 rounded-xl p-3">
+              <p class="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 uppercase">Token Aktif Admin (Berganti tiap menit)</p>
+              <div id="adminTokenDisplay" class="text-xl font-mono font-extrabold tracking-widest text-emerald-800 dark:text-emerald-200 mt-1">MEMUAT...</div>
+            </div>
+            <div class="w-full space-y-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+              <input type="text" id="tteTokenInput" placeholder="Masukkan Token TTE..." class="w-full px-3 py-2 text-center font-mono uppercase rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+              <button onclick="verifyTTE()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm">Verifikasi & Lihat TTD</button>
+            </div>
+            <div id="tteSignatureResult" class="hidden w-full p-3 bg-white rounded-xl border border-slate-200 shadow-inner">
+              <p class="text-[11px] font-bold text-slate-600 mb-1">DOKUMEN SAH DITANDATANGANI OLEH:</p>
+              <img id="officialSignatureImg" src="" alt="TTD Resmi" class="h-24 mx-auto object-contain">
+              <p class="text-xs font-bold text-slate-800 mt-1">Muhammad Sufyan Fahriza</p>
+              <p class="text-[10px] text-slate-500">Eselon III (Pejabat Rohis)</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==================== MODAL TANDA TANGAN NOTULENSI ==================== -->
+  <div id="signatureModal" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <h3 class="text-lg font-bold">Bubuhkan Tanda Tangan</h3>
+      <p class="text-xs text-slate-500 dark:text-slate-400">Silakan tanda tangan pada kotak di bawah sebelum mengunduh PDF.</p>
+      <canvas id="sig-canvas" width="360" height="160" class="w-full bg-white"></canvas>
+      <div class="flex justify-between gap-2">
+        <button onclick="clearCanvas()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-xl text-xs font-bold">Hapus Coretan</button>
+        <div class="flex gap-2">
+          <button onclick="closeSignatureModal()" class="px-4 py-2 bg-slate-300 dark:bg-slate-600 rounded-xl text-xs font-bold">Batal</button>
+          <button onclick="approveAndDownloadPDF()" class="px-4 py-2 bg-blue-700 text-white rounded-xl text-xs font-bold">Setujui & Download PDF</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 9. MODAL SETTING ==================== -->
+  <div id="settingsModal" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-slate-200 dark:border-slate-700">
+      <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-3">
+        <h3 class="text-lg font-bold"><i class="fa-solid fa-sliders mr-2 text-blue-600"></i>Pengaturan Aplikasi</h3>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-xmark text-xl"></i></button>
+      </div>
+
+      <!-- Tombol Instal PWA di Setting -->
+      <div class="flex justify-between items-center">
+        <span class="font-semibold text-sm">Pasang ke Layar Utama</span>
+        <button onclick="triggerInstallPWA()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs">
+          <i class="fa-solid fa-download mr-1"></i> Instal Aplikasi
+        </button>
+      </div>
+
+      <!-- Mode Gelap / Terang -->
+      <div class="flex justify-between items-center">
+        <span class="font-semibold text-sm">Tema Tampilan</span>
+        <button onclick="toggleDarkMode()" id="themeToggleBtn" class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 font-bold text-xs">
+          <i class="fa-solid fa-moon mr-1"></i> Mode Gelap / Terang
+        </button>
+      </div>
+
+      <!-- Ukuran Font -->
+      <div>
+        <span class="block font-semibold text-sm mb-2">Ukuran Font</span>
+        <div class="grid grid-cols-3 gap-2">
+          <button onclick="setFontSize('font-small')" class="py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-bold hover:bg-blue-600 hover:text-white">Kecil</button>
+          <button onclick="setFontSize('font-medium-custom')" class="py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-sm font-bold hover:bg-blue-600 hover:text-white">Sedang</button>
+          <button onclick="setFontSize('font-large')" class="py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-base font-bold hover:bg-blue-600 hover:text-white">Besar</button>
+        </div>
+      </div>
+
+      <!-- Tentang -->
+      <div class="bg-slate-100 dark:bg-slate-700/60 p-4 rounded-xl space-y-1 text-xs">
+        <p class="font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-1">Tentang Aplikasi</p>
+        <p><span class="font-semibold">Nama:</span> Muhammad Sufyan Fahriza</p>
+        <p><span class="font-semibold">Jabatan:</span> Eselon III (Pejabat Rohis)</p>
+        <p><span class="font-semibold">Nama Sahabat:</span> Tommy Pramono</p>
+      </div>
+
+      <!-- Logout -->
+      <button onclick="logoutApp()" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow text-sm">
+        <i class="fa-solid fa-right-from-bracket mr-2"></i> LOGOUT
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL PANDUAN INSTAL PWA (FALLBACK iOS / MANUAL) ==================== -->
+  <div id="installHelpModal" class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200 dark:border-slate-700">
+      <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-3">
+        <h3 class="text-lg font-bold text-emerald-600"><i class="fa-solid fa-mobile-screen mr-2"></i>Instal MUSAFA Mobile</h3>
+        <button onclick="closeInstallHelp()" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-xmark text-xl"></i></button>
+      </div>
+      <div class="text-xs md:text-sm space-y-3 text-slate-600 dark:text-slate-300">
+        <p class="font-semibold text-slate-800 dark:text-white">Ikuti langkah berikut untuk memasang aplikasi ke layar utama perangkat Anda:</p>
+        <div class="p-3 rounded-xl bg-slate-100 dark:bg-slate-700/60 space-y-1.5">
+          <p class="font-bold text-blue-600 dark:text-blue-400"><i class="fa-brands fa-android mr-1"></i> Android (Chrome):</p>
+          <p>1. Ketuk ikon <b>Titik Tiga (⋮)</b> di pojok kanan atas browser.</p>
+          <p>2. Pilih <b>"Tambahkan ke Layar Utama"</b> atau <b>"Instal Aplikasi"</b>.</p>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-100 dark:bg-slate-700/60 space-y-1.5">
+          <p class="font-bold text-slate-800 dark:text-slate-200"><i class="fa-brands fa-apple mr-1"></i> iPhone / iPad (Safari):</p>
+          <p>1. Ketuk ikon <b>Bagikan (Share / kotak panah ke atas)</b> di bawah layar.</p>
+          <p>2. Gulir ke bawah dan pilih <b>"Tambah ke Layar Utama" (Add to Home Screen)</b>.</p>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-100 dark:bg-slate-700/60 space-y-1.5">
+          <p class="font-bold text-indigo-600 dark:text-indigo-400"><i class="fa-solid fa-laptop mr-1"></i> Laptop / PC (Chrome / Edge):</p>
+          <p>1. Klik ikon <b>Instal / Layar dengan panah</b> di ujung kanan bilah alamat (URL bar).</p>
+        </div>
+      </div>
+      <button onclick="closeInstallHelp()" class="w-full py-2.5 bg-blue-700 text-white font-bold rounded-xl text-sm">Mengerti</button>
+    </div>
+  </div>
+
+  <script>
+    const APP_BASE_URL = "<?= appUrl ?>";
+    let deferredPrompt = null;
+
+    // --- REGISTRASI SERVICE WORKER PWA ---
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register(APP_BASE_URL + '?page=sw')
+          .then(reg => console.log('PWA Service Worker terdaftar:', reg.scope))
+          .catch(err => console.log('SW info:', err));
+      });
+    }
+
+    // Menangkap event instalasi PWA bawaan browser
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+    });
+
+    // Sembunyikan tombol instal jika aplikasi sudah berjalan dalam mode terinstal (Standalone / Fullscreen)
+    window.addEventListener('appinstalled', () => {
+      deferredPrompt = null;
+      document.getElementById('loginInstallBtn').classList.add('hidden');
+      document.getElementById('headerInstallBtn').classList.add('hidden');
+      alert('MUSAFA Mobile berhasil diinstal ke perangkat Anda!');
+    });
+
+    if (window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(display-mode: fullscreen)').matches) {
+      document.addEventListener('DOMContentLoaded', () => {
+        const b1 = document.getElementById('loginInstallBtn');
+        const b2 = document.getElementById('headerInstallBtn');
+        if (b1) b1.classList.add('hidden');
+        if (b2) b2.classList.add('hidden');
+      });
+    }
+
+    function triggerInstallPWA() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          deferredPrompt = null;
+        });
+      } else {
+        // Jika browser (seperti Safari iOS) tidak mendukung prompt otomatis, tampilkan panduan visual
+        document.getElementById('installHelpModal').classList.remove('hidden');
+      }
+    }
+
+    function closeInstallHelp() {
+      document.getElementById('installHelpModal').classList.add('hidden');
+    }
+
+    // --- STATE & DATA APLIKASI ---
+    let appData = { Agenda: [], Pelajaran: [], Ujian: [], Tugas: [], Notulensi: [] };
+    let userRole = null;
+    let pinVerified = false;
+    let notifiedItems = new Set();
+    const namaHari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const namaBulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+    // --- AUTO FULLSCREEN SAAT INTERAKSI PERTAMA ---
+    document.addEventListener('click', () => {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    }, { once: true });
+
+    // --- LOGIN LOGIC ---
+    function togglePasswordVisibility() {
+      const input = document.getElementById('loginUsername');
+      const icon = document.getElementById('eyeIcon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.replace('fa-eye', 'fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.replace('fa-eye-slash', 'fa-eye');
+      }
+    }
+
+    function handleLogin() {
+      const uname = document.getElementById('loginUsername').value.trim();
+      google.script.run.withSuccessHandler(isValid => {
+        if (isValid) {
+          userRole = 'admin';
+          enterApp();
+        } else {
+          alert('Username salah! Akses ditolak.');
+        }
+      }).verifyLogin(uname);
+    }
+
+    function handleGuestLogin() {
+      userRole = 'guest';
+      enterApp();
+    }
+
+    function enterApp() {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('mainApp').classList.remove('hidden');
+      
+      const todayISO = new Date().toISOString().split('T')[0];
+      document.getElementById('calendarFilter').value = todayISO;
+
+      if (userRole === 'guest') {
+        document.getElementById('navTabs').classList.add('hidden');
+        document.getElementById('roleBadge').innerText = 'MODE TAMU';
+        document.getElementById('roleBadge').className = 'hidden md:inline-block px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800';
+      } else {
+        document.getElementById('navTabs').classList.remove('hidden');
+        document.getElementById('adminTokenPanel').classList.remove('hidden');
+        refreshDynamicToken();
+        setInterval(refreshDynamicToken, 15000);
+      }
+
+      if ("Notification" in window && Notification.permission !== "granted") {
+        Notification.requestPermission();
+      }
+
+      syncData();
+      setInterval(updateLiveClockAndAlerts, 1000);
+    }
+
+    function logoutApp() {
+      location.reload();
+    }
+
+    function syncData(manual = false) {
+      const icon = document.getElementById('syncIcon');
+      icon.classList.add('fa-spin');
+      google.script.run.withSuccessHandler(data => {
+        appData = data;
+        renderDashboard();
+        renderTables();
+        icon.classList.remove('fa-spin');
+        if (manual) alert('Data berhasil disinkronkan dengan Google Spreadsheet!');
+      }).getAllData();
+    }
+
+    function requestPinAndSwitch(tabName) {
+      if (userRole === 'guest') return;
+      if (pinVerified) {
+        switchTab(tabName);
+        return;
+      }
+      const inputPin = prompt('Masukkan PIN Keamanan untuk mengakses halaman ini:');
+      if (!inputPin) return;
+      google.script.run.withSuccessHandler(valid => {
+        if (valid) {
+          pinVerified = true;
+          switchTab(tabName);
+        } else {
+          alert('PIN Salah! Akses ditolak.');
+        }
+      }).verifyPin(inputPin);
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById('tab-' + tabName).classList.remove('hidden');
+      
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-blue-700', 'text-white');
+        btn.classList.add('text-slate-600', 'dark:text-slate-300');
+      });
+      if (event && event.currentTarget && event.currentTarget.classList.contains('tab-btn')) {
+        event.currentTarget.classList.add('bg-blue-700', 'text-white');
+        event.currentTarget.classList.remove('text-slate-600', 'dark:text-slate-300');
+      }
+    }
+
+    function updateLiveClockAndAlerts() {
+      const now = new Date();
+      const hari = namaHari[now.getDay()];
+      const tgl = now.getDate();
+      const bln = namaBulan[now.getMonth()];
+      const thn = now.getFullYear();
+      const jam = String(now.getHours()).padStart(2, '0');
+      const mnt = String(now.getMinutes()).padStart(2, '0');
+      const dtk = String(now.getSeconds()).padStart(2, '0');
+
+      document.getElementById('liveClock').innerText = `${hari}, ${tgl} ${bln} ${thn} — ${jam}:${mnt}:${dtk} WIB`;
+
+      const upcomingAgendas = appData.Agenda
+        .map(a => ({ ...a, dt: new Date(a.JatuhTempo) }))
+        .filter(a => a.dt > now)
+        .sort((a, b) => a.dt - b.dt);
+
+      if (upcomingAgendas.length > 0) {
+        const next = upcomingAgendas[0];
+        document.getElementById('nextAgendaTitle').innerText = `${next.Judul} (${next.Prioritas})`;
+        const diff = next.dt - now;
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const m = Math.floor((diff / 1000 / 60) % 60);
+        const s = Math.floor((diff / 1000) % 60);
+        document.getElementById('countdownTimer').innerText = `${d}h ${String(h).padStart(2,'0')}j ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}d`;
+      } else {
+        document.getElementById('nextAgendaTitle').innerText = 'Tidak ada agenda mendatang';
+        document.getElementById('countdownTimer').innerText = '00 : 00 : 00 : 00';
+      }
+
+      checkOneHourAlert(appData.Agenda, 'Judul', 'JatuhTempo', 'AGENDA', now);
+      checkOneHourAlert(appData.Tugas, 'MataPelajaran', 'Deadline', 'TUGAS', now);
+    }
+
+    function checkOneHourAlert(list, titleKey, dateKey, type, now) {
+      list.forEach(item => {
+        const target = new Date(item[dateKey]);
+        const diffMinutes = (target - now) / (1000 * 60);
+        const alertKey = `${type}_${item.ID}`;
+        if (diffMinutes > 0 && diffMinutes <= 60 && !notifiedItems.has(alertKey)) {
+          notifiedItems.add(alertKey);
+          document.getElementById('alarmSound').play().catch(() => {});
+          const msg = `PENGINGAT H-1 JAM (${type}): ${item[titleKey]} jatuh tempo pada ${target.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}`;
+          if ("Notification" in window && Notification.permission === "granted") {
+            new Notification("MUSAFA Mobile Alarm", { body: msg });
+          }
+          alert(msg);
+        }
+      });
+    }
+
+    function renderDashboard() {
+      const now = new Date();
+      const prioRank = { 'DINAS': 1, 'KHUSUS': 2, 'UMUM': 3 };
+
+      const selectedDate = document.getElementById('calendarFilter').value;
+      const calContainer = document.getElementById('calendarDateEvents');
+      const dayAgendas = appData.Agenda.filter(a => a.JatuhTempo && a.JatuhTempo.startsWith(selectedDate));
+      const dayTugas = appData.Tugas.filter(t => t.Deadline && t.Deadline.startsWith(selectedDate));
+
+      if (dayAgendas.length === 0 && dayTugas.length === 0) {
+        calContainer.innerHTML = `<p class="text-xs text-slate-400 italic">Tidak ada agenda atau tugas pada tanggal terpilih.</p>`;
+      } else {
+        calContainer.innerHTML = [
+          ...dayAgendas.map(a => `<div class="p-2.5 rounded-xl bg-blue-50 dark:bg-slate-700 text-xs border-l-4 border-blue-600"><b>[AGENDA]</b> ${a.Judul} (${new Date(a.JatuhTempo).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})})</div>`),
+          ...dayTugas.map(t => `<div class="p-2.5 rounded-xl bg-amber-50 dark:bg-slate-700 text-xs border-l-4 border-amber-500"><b>[TUGAS]</b> ${t.MataPelajaran}: ${t.DetailTugas}</div>`)
+        ].join('');
+      }
+
+      const sortedAgendas = [...appData.Agenda].sort((a, b) => {
+        const dtA = new Date(a.JatuhTempo).toDateString();
+        const dtB = new Date(b.JatuhTempo).toDateString();
+        if (dtA === dtB) {
+          return (prioRank[a.Prioritas] || 9) - (prioRank[b.Prioritas] || 9);
+        }
+        return new Date(a.JatuhTempo) - new Date(b.JatuhTempo);
+      });
+
+      const agendaListEl = document.getElementById('dashboardAgendaList');
+      if (sortedAgendas.length === 0) {
+        agendaListEl.innerHTML = `<p class="text-xs text-slate-400">Belum ada agenda yang diinput.</p>`;
+      } else {
+        agendaListEl.innerHTML = sortedAgendas.map(a => {
+          const dt = new Date(a.JatuhTempo);
+          const isExpired = dt < now;
+          const statusLabel = isExpired ? 'SELESAI (Otomatis)' : (a.Status === 'Disposisi' ? `Disposisi ke: ${a.DisposisiKepada}` : 'Diagendakan');
+          const badgeColor = a.Prioritas === 'DINAS' ? 'bg-red-600 text-white' : (a.Prioritas === 'KHUSUS' ? 'bg-amber-500 text-white' : 'bg-slate-500 text-white');
+          
+          return `
+            <div class="p-3.5 rounded-xl border ${isExpired ? 'opacity-60 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700' : 'bg-white dark:bg-slate-700/50 border-slate-200 dark:border-slate-600'} flex flex-col sm:flex-row justify-between gap-2">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeColor}">${a.Prioritas}</span>
+                  <h4 class="font-bold text-sm">${a.Judul}</h4>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-300 mt-1"><i class="fa-solid fa-location-dot mr-1"></i>${a.Lokasi} | <i class="fa-regular fa-clock mr-1"></i>${dt.toLocaleString('id-ID')} (${a.Durasi})</p>
+                ${a.TamuKhusus ? `<p class="text-xs text-blue-600 dark:text-blue-400 mt-0.5"><i class="fa-solid fa-user-tie mr-1"></i>Tamu Khusus: ${a.TamuKhusus}</p>` : ''}
+              </div>
+              <div class="self-start sm:self-center">
+                <span class="px-3 py-1 rounded-full text-xs font-bold ${isExpired ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}">${statusLabel}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      const todayName = namaHari[now.getDay()];
+      const tomorrowDate = new Date(now);
+      tomorrowDate.setDate(now.getDate() + 1);
+      const tomorrowName = namaHari[tomorrowDate.getDay()];
+
+      const activeExams = appData.Ujian.filter(u => u.StatusAktif === 'AKTIF');
+      const isExamMode = activeExams.length > 0;
+      document.getElementById('examModeBadge').classList.toggle('hidden', !isExamMode);
+      document.getElementById('scheduleHeaderTitle').innerHTML = isExamMode 
+        ? `<i class="fa-solid fa-file-pen mr-2 text-red-600"></i>Jadwal Ujian Hari Ini & Besok`
+        : `<i class="fa-solid fa-graduation-cap mr-2 text-blue-600"></i>Jadwal Pelajaran Hari Ini & Besok`;
+
+      const sourceList = isExamMode ? activeExams : appData.Pelajaran;
+      
+      const todayItems = sourceList.filter(item => {
+        if (item.Hari !== todayName) return false;
+        const timeStr = isExamMode ? item.Jam : item.Waktu;
+        const parts = timeStr.split('-');
+        if (parts.length === 2) {
+          const endParts = parts[1].trim().split(':');
+          const endDt = new Date(now);
+          endDt.setHours(parseInt(endParts[0]), parseInt(endParts[1] || 0), 0);
+          return now <= endDt;
+        }
+        return true;
+      });
+
+      const todayContainer = document.getElementById('todayScheduleList');
+      if (todayItems.length === 0) {
+        todayContainer.innerHTML = `<div class="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-bold text-xs text-center">TERIMAKASIH SUDAH BEKERJA DENGAN BAIK,SAATNYA ISTIRAHAT</div>`;
+      } else {
+        todayContainer.innerHTML = todayItems.map(item => renderScheduleCard(item, isExamMode)).join('');
+      }
+
+      const tomorrowItems = sourceList.filter(item => item.Hari === tomorrowName);
+      const tomorrowContainer = document.getElementById('tomorrowScheduleList');
+      if (tomorrowItems.length === 0) {
+        tomorrowContainer.innerHTML = `<div class="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 font-bold text-xs text-center">SAATNYA PULANG KE TEMPAT ASAL HATI HATI DIJALAN</div>`;
+      } else {
+        tomorrowContainer.innerHTML = tomorrowItems.map(item => renderScheduleCard(item, isExamMode)).join('');
+      }
+
+      const tugasEl = document.getElementById('dashboardTugasList');
+      if (appData.Tugas.length === 0) {
+        tugasEl.innerHTML = `<p class="text-xs text-slate-400">Tidak ada tugas sekolah saat ini.</p>`;
+      } else {
+        tugasEl.innerHTML = appData.Tugas.map(t => `
+          <div class="p-3.5 rounded-xl bg-amber-50/70 dark:bg-slate-700/60 border border-amber-200 dark:border-slate-600">
+            <div class="flex justify-between items-start">
+              <h4 class="font-bold text-sm text-amber-900 dark:text-amber-300">${t.MataPelajaran}</h4>
+              <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-700">DL: ${new Date(t.Deadline).toLocaleString('id-ID')}</span>
+            </div>
+            <p class="text-xs mt-1">${t.DetailTugas}</p>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Guru: ${t.Guru}</p>
+          </div>
+        `).join('');
+      }
+    }
+
+    function renderScheduleCard(item, isExamMode) {
+      const hasTask = appData.Tugas.some(t => t.MataPelajaran.toLowerCase().trim() === item.MataPelajaran.toLowerCase().trim());
+      return `
+        <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600 flex justify-between items-center">
+          <div>
+            <h5 class="font-bold text-sm">${item.MataPelajaran} ${hasTask ? '<span class="ml-1.5 px-2 py-0.5 text-[10px] bg-amber-500 text-white rounded-full"><i class="fa-solid fa-bell mr-1"></i>Ada Tugas</span>' : ''}</h5>
+            <p class="text-xs text-slate-500 dark:text-slate-300">${isExamMode ? 'Ujian Sekolah' : item.Guru}</p>
+          </div>
+          <span class="text-xs font-mono font-bold bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-600">${isExamMode ? item.Jam : item.Waktu}</span>
+        </div>
+      `;
+    }
+
+    function toggleDisposisiField() {
+      const val = document.getElementById('agendaStatus').value;
+      document.getElementById('disposisiWrapper').classList.toggle('hidden', val !== 'Disposisi');
+    }
+
+    function submitAgenda(e) {
+      e.preventDefault();
+      const rec = {
+        ID: document.getElementById('agendaId').value,
+        Judul: document.getElementById('agendaJudul').value,
+        Lokasi: document.getElementById('agendaLokasi').value,
+        JatuhTempo: document.getElementById('agendaJatuhTempo').value,
+        Durasi: document.getElementById('agendaDurasi').value,
+        Prioritas: document.getElementById('agendaPrioritas').value,
+        Status: document.getElementById('agendaStatus').value,
+        DisposisiKepada: document.getElementById('agendaDisposisi').value,
+        TamuKhusus: document.getElementById('agendaTamu').value
+      };
+      saveToSheet('Agenda', rec, 'formAgenda', 'agendaId');
+    }
+
+    function submitPelajaran(e) {
+      e.preventDefault();
+      const rec = {
+        ID: document.getElementById('pelajaranId').value,
+        MataPelajaran: document.getElementById('pelajaranMapel').value,
+        Guru: document.getElementById('pelajaranGuru').value,
+        Hari: document.getElementById('pelajaranHari').value,
+        Waktu: document.getElementById('pelajaranWaktu').value
+      };
+      saveToSheet('Pelajaran', rec, 'formPelajaran', 'pelajaranId');
+    }
+
+    function submitUjian(e) {
+      e.preventDefault();
+      const rec = {
+        ID: document.getElementById('ujianId').value,
+        Hari: document.getElementById('ujianHari').value,
+        Jam: document.getElementById('ujianJam').value,
+        MataPelajaran: document.getElementById('ujianMapel').value,
+        StatusAktif: document.getElementById('ujianStatus').value
+      };
+      saveToSheet('Ujian', rec, 'formUjian', 'ujianId');
+    }
+
+    function submitTugas(e) {
+      e.preventDefault();
+      const rec = {
+        ID: document.getElementById('tugasId').value,
+        Deadline: document.getElementById('tugasDeadline').value,
+        MataPelajaran: document.getElementById('tugasMapel').value,
+        Guru: document.getElementById('tugasGuru').value,
+        DetailTugas: document.getElementById('tugasDetail').value
+      };
+      saveToSheet('Tugas', rec, 'formTugas', 'tugasId');
+    }
+
+    function saveToSheet(sheetName, record, formId, idField) {
+      google.script.run.withSuccessHandler(data => {
+        appData = data;
+        resetForm(formId, idField);
+        renderDashboard();
+        renderTables();
+        alert('Data berhasil disimpan dan diperbarui di Google Spreadsheet!');
+      }).saveRecord(sheetName, record);
+    }
+
+    function deleteFromSheet(sheetName, id) {
+      if (!confirm('Yakin ingin menghapus data ini dari Spreadsheet?')) return;
+      google.script.run.withSuccessHandler(data => {
+        appData = data;
+        renderDashboard();
+        renderTables();
+      }).deleteRecord(sheetName, id);
+    }
+
+    function resetForm(formId, idField) {
+      document.getElementById(formId).reset();
+      document.getElementById(idField).value = '';
+    }
+
+    function renderTables() {
+      document.getElementById('tableAgendaBody').innerHTML = appData.Agenda.map(a => `
+        <tr class="border-b border-slate-100 dark:border-slate-700">
+          <td class="py-2"><b>${a.Judul}</b><br><span class="text-xs text-slate-400">${a.Lokasi}</span></td>
+          <td class="py-2">${new Date(a.JatuhTempo).toLocaleString('id-ID')}<br><span class="text-xs">${a.Durasi}</span></td>
+          <td class="py-2 font-bold">${a.Prioritas}</td>
+          <td class="py-2">${a.Status} ${a.DisposisiKepada ? '('+a.DisposisiKepada+')' : ''}</td>
+          <td class="py-2 space-x-1">
+            <button onclick='editAgenda(${JSON.stringify(a)})' class="px-2.5 py-1 bg-amber-500 text-white rounded text-xs">Edit</button>
+            <button onclick="deleteFromSheet('Agenda','${a.ID}')" class="px-2.5 py-1 bg-red-600 text-white rounded text-xs">Hapus</button>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('tablePelajaranBody').innerHTML = appData.Pelajaran.map(p => `
+        <tr class="border-b border-slate-100 dark:border-slate-700">
+          <td class="py-2">${p.Hari}, ${p.Waktu}</td>
+          <td class="py-2 font-bold">${p.MataPelajaran}</td>
+          <td class="py-2">${p.Guru}</td>
+          <td class="py-2 space-x-1">
+            <button onclick='editPelajaran(${JSON.stringify(p)})' class="px-2.5 py-1 bg-amber-500 text-white rounded text-xs">Edit</button>
+            <button onclick="deleteFromSheet('Pelajaran','${p.ID}')" class="px-2.5 py-1 bg-red-600 text-white rounded text-xs">Hapus</button>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('tableUjianBody').innerHTML = appData.Ujian.map(u => `
+        <tr class="border-b border-slate-100 dark:border-slate-700">
+          <td class="py-2">${u.Hari}, ${u.Jam}</td>
+          <td class="py-2 font-bold">${u.MataPelajaran}</td>
+          <td class="py-2"><span class="px-2 py-0.5 rounded text-xs font-bold ${u.StatusAktif==='AKTIF'?'bg-red-600 text-white':'bg-slate-300 text-slate-800'}">${u.StatusAktif}</span></td>
+          <td class="py-2 space-x-1">
+            <button onclick='editUjian(${JSON.stringify(u)})' class="px-2.5 py-1 bg-amber-500 text-white rounded text-xs">Edit</button>
+            <button onclick="deleteFromSheet('Ujian','${u.ID}')" class="px-2.5 py-1 bg-red-600 text-white rounded text-xs">Hapus</button>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('tableTugasBody').innerHTML = appData.Tugas.map(t => `
+        <tr class="border-b border-slate-100 dark:border-slate-700">
+          <td class="py-2">${new Date(t.Deadline).toLocaleString('id-ID')}</td>
+          <td class="py-2"><b>${t.MataPelajaran}</b><br><span class="text-xs">${t.Guru}</span></td>
+          <td class="py-2">${t.DetailTugas}</td>
+          <td class="py-2 space-x-1">
+            <button onclick='editTugas(${JSON.stringify(t)})' class="px-2.5 py-1 bg-amber-500 text-white rounded text-xs">Edit</button>
+            <button onclick="deleteFromSheet('Tugas','${t.ID}')" class="px-2.5 py-1 bg-red-600 text-white rounded text-xs">Hapus</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function editAgenda(a) {
+      document.getElementById('agendaId').value = a.ID;
+      document.getElementById('agendaJudul').value = a.Judul;
+      document.getElementById('agendaLokasi').value = a.Lokasi;
+      document.getElementById('agendaJatuhTempo').value = a.JatuhTempo.slice(0,16);
+      document.getElementById('agendaDurasi').value = a.Durasi;
+      document.getElementById('agendaPrioritas').value = a.Prioritas;
+      document.getElementById('agendaStatus').value = a.Status;
+      toggleDisposisiField();
+      document.getElementById('agendaDisposisi').value = a.DisposisiKepada || '';
+      document.getElementById('agendaTamu').value = a.TamuKhusus || '';
+    }
+    function editPelajaran(p) {
+      document.getElementById('pelajaranId').value = p.ID;
+      document.getElementById('pelajaranMapel').value = p.MataPelajaran;
+      document.getElementById('pelajaranGuru').value = p.Guru;
+      document.getElementById('pelajaranHari').value = p.Hari;
+      document.getElementById('pelajaranWaktu').value = p.Waktu;
+    }
+    function editUjian(u) {
+      document.getElementById('ujianId').value = u.ID;
+      document.getElementById('ujianHari').value = u.Hari;
+      document.getElementById('ujianJam').value = u.Jam;
+      document.getElementById('ujianMapel').value = u.MataPelajaran;
+      document.getElementById('ujianStatus').value = u.StatusAktif;
+    }
+    function editTugas(t) {
+      document.getElementById('tugasId').value = t.ID;
+      document.getElementById('tugasDeadline').value = t.Deadline.slice(0,16);
+      document.getElementById('tugasMapel').value = t.MataPelajaran;
+      document.getElementById('tugasGuru').value = t.Guru;
+      document.getElementById('tugasDetail').value = t.DetailTugas;
+    }
+
+    // --- 7. NOTULENSI & CANVAS TANDA TANGAN ---
+    const canvas = document.getElementById('sig-canvas');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    canvas.addEventListener('mousedown', e => { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); });
+    canvas.addEventListener('mousemove', e => { if (!drawing) return; const p = getPos(e); ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.strokeStyle = '#0f172a'; ctx.lineTo(p.x, p.y); ctx.stroke(); });
+    canvas.addEventListener('mouseup', () => drawing = false);
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); });
+    canvas.addEventListener('touchmove', e => { e.preventDefault(); if (!drawing) return; const p = getPos(e); ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.strokeStyle = '#0f172a'; ctx.lineTo(p.x, p.y); ctx.stroke(); });
+    canvas.addEventListener('touchend', () => drawing = false);
+
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function openSignatureModal() {
+      const judul = document.getElementById('notulenJudul').value.trim();
+      const isi = document.getElementById('notulenIsi').value.trim();
+      if (!judul || !isi) { alert('Harap isi Judul dan Isi Notulensi terlebih dahulu!'); return; }
+      clearCanvas();
+      document.getElementById('signatureModal').classList.remove('hidden');
+    }
+
+    function closeSignatureModal() {
+      document.getElementById('signatureModal').classList.add('hidden');
+    }
+
+    function approveAndDownloadPDF() {
+      const sigDataUrl = canvas.toDataURL('image/png');
+      const judul = document.getElementById('notulenJudul').value;
+      const isi = document.getElementById('notulenIsi').value.replace(/\n/g, '<br>');
+      const tgl = new Date().toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+      google.script.run.saveRecord('Notulensi', {
+        Tanggal: new Date().toISOString(),
+        JudulRapat: judul,
+        IsiNotulensi: document.getElementById('notulenIsi').value,
+        StatusTTE: 'Ditandatangani'
+      });
+
+      const pdfContent = `
+        <div style="padding: 30px; font-family: Arial, sans-serif; color: #000;">
+          <div style="display:flex; align-items:center; border-bottom: 3px solid #1e3a8a; padding-bottom: 12px; margin-bottom: 20px;">
+            <img src="https://lh3.googleusercontent.com/d/1v9XLw_NjWKP9zdtIgREkPYmgakhKMq_n" style="width:60px; height:60px; margin-right:15px;">
+            <div>
+              <h2 style="margin:0; color:#1e3a8a;">MUSAFA MOBILE</h2>
+              <p style="margin:2px 0 0; font-size:12px; color:#475569;">Sistem Managemen Agenda dan Tugas — Notulensi Resmi</p>
+            </div>
+          </div>
+          <p style="font-size:12px;"><b>Tanggal:</b> ${tgl}</p>
+          <h3 style="margin-top:10px;">Agenda: ${judul}</h3>
+          <div style="margin-top:15px; font-size:13px; line-height:1.6; min-height:200px;">${isi}</div>
+          <div style="margin-top:40px; text-align:right;">
+            <p style="font-size:12px; margin-bottom:5px;">Disetujui dan ditandatangani oleh,</p>
+            <img src="${sigDataUrl}" style="height:80px; border-bottom:1px solid #000;"><br>
+            <b style="font-size:13px;">Muhammad Sufyan Fahriza</b><br>
+            <span style="font-size:11px;">Eselon III (Pejabat Rohis)</span>
+          </div>
+        </div>
+      `;
+
+      const element = document.createElement('div');
+      element.innerHTML = pdfContent;
+      html2pdf().from(element).save(`Notulensi_${judul.replace(/\s+/g,'_')}.pdf`);
+      closeSignatureModal();
+    }
+
+    // --- 8. TTE QR & TOKEN DINAMIS ---
+    function refreshDynamicToken() {
+      google.script.run.withSuccessHandler(token => {
+        if (userRole === 'admin') {
+          document.getElementById('adminTokenDisplay').innerText = token;
+        }
+        const qrContainer = document.getElementById('qrcodeContainer');
+        qrContainer.innerHTML = '';
+        new QRCode(qrContainer, {
+          text: `MUSAFA-TTE-TOKEN:${token}`,
+          width: 140,
+          height: 140
+        });
+      }).getDynamicTTEToken();
+    }
+
+    function verifyTTE() {
+      const input = document.getElementById('tteTokenInput').value;
+      google.script.run.withSuccessHandler(res => {
+        if (res.valid) {
+          document.getElementById('officialSignatureImg').src = res.ttdUrl;
+          document.getElementById('tteSignatureResult').classList.remove('hidden');
+        } else {
+          alert('Token TTE salah atau sudah kedaluwarsa (berganti setiap 1 menit)!');
+          document.getElementById('tteSignatureResult').classList.add('hidden');
+        }
+      }).verifyTTEToken(input);
+    }
+
+    // --- 9. PENGATURAN (TEMA & FONT) ---
+    function openSettingsModal() { document.getElementById('settingsModal').classList.remove('hidden'); }
+    function closeSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); }
+    function toggleDarkMode() { document.documentElement.classList.toggle('dark'); }
+    function setFontSize(cls) {
+      document.body.classList.remove('font-small', 'font-medium-custom', 'font-large');
+      document.body.classList.add(cls);
+    }
+  </script>
+</body>
+</html>
